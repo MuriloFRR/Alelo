@@ -1,0 +1,50 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+# Caminhos dos arquivos reapós reset
+heroes_path = "C:/Users/muril/Downloads/archive/heroes_information.csv"
+powers_path = "C:/Users/muril/Downloads/archive/super_hero_powers.csv"
+
+# Carregar os dados
+heroes_df = pd.read_csv(heroes_path)
+powers_df = pd.read_csv(powers_path)
+
+# Renomear a coluna de identificação para fazer merge
+powers_df = powers_df.rename(columns={"hero_names": "name"})
+
+# Mesclar os dois arquivos com base no nome
+merged_df = pd.merge(powers_df, heroes_df, on="name", how="inner")
+
+# Selecionar apenas as colunas dos poderes para o clustering
+power_features = powers_df.columns[1:]  # Excluindo a coluna "name"
+X = merged_df[power_features].fillna(0)
+
+# Normalizar os dados
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Calcular a inércia para diferentes valores de k
+inertias = []
+k_values = range(1, 11)
+
+for k in k_values:
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+    kmeans.fit(X_scaled)
+    inertias.append(kmeans.inertia_)
+
+# Gerar gráfico da curva do cotovelo
+plt.figure(figsize=(8, 5))
+plt.plot(k_values, inertias, marker='o')
+plt.title("Método do Cotovelo para Determinar o Número Ideal de Clusters")
+plt.xlabel("Número de Clusters (k)")
+plt.ylabel("Inércia")
+plt.xticks(k_values)
+plt.grid(True)
+plt.tight_layout()
+elbow_plot_path = "C:/Users/muril/Downloads/archive/elbow_method_plot.png"
+plt.savefig(elbow_plot_path)
+plt.close()
+
+elbow_plot_path
