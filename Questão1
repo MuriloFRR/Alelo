@@ -1,0 +1,78 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+# 📥 Carregamento dos dados
+heroes_df = pd.read_csv("C:/Users/muril/Downloads/archive/heroes_information.csv")
+powers_df = pd.read_csv("C:/Users/muril/Downloads/archive/super_hero_powers.csv")
+powers_df = powers_df.rename(columns={"hero_names": "name"})
+
+# 🔗 Mesclagem dos dados pelos nomes dos heróis
+df = pd.merge(powers_df, heroes_df, on="name", how="inner")
+
+# 🧠 Seleção apenas das colunas de poderes
+power_features = powers_df.columns[1:]
+X = df[power_features].fillna(0)
+
+# 📏 Padronização (normalização) dos dados
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# 🔻 Redução de dimensionalidade para 2D (visualização)
+pca = PCA(n_components=2)
+X_2d = pca.fit_transform(X_scaled)
+
+# ⚙️ Parâmetros do KMeans
+k = 4
+n_iter = 20
+centroids_history = []
+labels_history = []
+
+# 🎯 Inicialização aleatória dos centróides
+np.random.seed(42)
+initial_centroids = X_scaled[np.random.choice(len(X_scaled), k, replace=False)]
+centroids = initial_centroids.copy()
+
+# 🔁 Loop para simular o KMeans manualmente e capturar cada etapa
+for i in range(n_iter):
+    distances = np.linalg.norm(X_scaled[:, np.newaxis] - centroids, axis=2)
+    labels = np.argmin(distances, axis=1)
+
+    centroids_history.append(pca.transform(centroids))     # salvar centróides transformados em 2D
+    labels_history.append(labels.copy())                   # salvar rótulos de cluster
+
+    new_centroids = np.array([
+        X_scaled[labels == j].mean(axis=0) if len(X_scaled[labels == j]) > 0 else centroids[j]
+        for j in range(k)
+    ])
+
+    if np.allclose(new_centroids, centroids):
+        break
+
+    centroids = new_centroids
+
+# 📽️ Criar animação interativa
+fig, ax = plt.subplots(figsize=(8, 6))
+colors = plt.cm.tab10(np.arange(k))
+
+def update(frame):
+    ax.clear()
+    ax.set_title(f"KMeans - Iteração {frame + 1}")
+    ax.set_xlabel("PCA1")
+    ax.set_ylabel("PCA2")
+
+    for i in range(k):
+        points = X_2d[np.array(labels_history[frame]) == i]
+        ax.scatter(points[:, 0], points[:, 1], s=30, color=colors[i], label=f"Cluster {i}")
+        ax.scatter(*centroids_history[frame][i], s=200, marker='X', color=colors[i], edgecolor='black')
+
+    ax.legend()
+
+ani = animation.FuncAnimation(fig, update, frames=len(centroids_history), interval=800)
+
+# 👀 Exibir animação na tela
+plt.show()
+
