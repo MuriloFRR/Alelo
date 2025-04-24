@@ -1,0 +1,35 @@
+import pandas as pd
+from sklearn.naive_bayes import BernoulliNB
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+
+# Carregar os dados
+heroes = pd.read_csv("C:/Users/muril/Downloads/archive/heroes_information.csv")
+powers = pd.read_csv("C:/Users/muril/Downloads/archive/super_hero_powers.csv")
+powers = powers.rename(columns={'hero_names': 'name'})
+
+# Juntar os dados
+df = pd.merge(powers, heroes[['name', 'Alignment']], on='name', how='inner')
+
+# Manter apenas "good" e "bad"
+df = df[df['Alignment'].isin(['good', 'bad'])]
+
+# Separar X e y
+X = df.drop(columns=["name", "Alignment"]).fillna(False)
+y = LabelEncoder().fit_transform(df["Alignment"])  # 0: bad, 1: good
+
+# Treinar modelo
+model = BernoulliNB()
+model.fit(X, y)
+
+# Obter log-probs
+log_probs = pd.DataFrame(model.feature_log_prob_, columns=X.columns, index=["bad", "good"]).T
+log_probs["diff_good_minus_bad"] = log_probs["good"] - log_probs["bad"]
+
+# Top 10 poderes mais indicativos de herói
+print("\n🔵 Top 10 poderes que mais indicam HERÓIS:")
+print(log_probs.sort_values("diff_good_minus_bad", ascending=False).head(10))
+
+# Top 10 poderes mais indicativos de vilão
+print("\n🔴 Top 10 poderes que mais indicam VILÕES:")
+print(log_probs.sort_values("diff_good_minus_bad").head(10))
