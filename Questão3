@@ -1,0 +1,50 @@
+import pandas as pd
+from sklearn.naive_bayes import BernoulliNB
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Carregando os dados
+heroes = pd.read_csv("C:/Users/muril/Downloads/archive/heroes_information.csv")
+powers = pd.read_csv("C:/Users/muril/Downloads/archive/super_hero_powers.csv")
+
+# Renomear a coluna para facilitar o merge
+powers.rename(columns={'hero_names': 'name'}, inplace=True)
+
+# Juntar os datasets
+df = pd.merge(powers, heroes[['name', 'Alignment']], on='name', how='inner')
+
+# Filtrar apenas heróis com alinhamento "good" ou "bad"
+df = df[df['Alignment'].isin(['good', 'bad'])]
+
+# Features (X) e target (y)
+X = df.drop(columns=['name', 'Alignment']).fillna(False)  # poderes
+y = df['Alignment']
+
+# Codificar o target (good = 1, bad = 0)
+label_encoder = LabelEncoder()
+y_encoded = label_encoder.fit_transform(y)
+
+# Dividir treino/teste
+X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.3, random_state=42)
+
+# Instanciar e treinar o modelo Naive Bayes para dados binários
+model = BernoulliNB()
+model.fit(X_train, y_train)
+
+# Previsões
+y_pred = model.predict(X_test)
+
+# Avaliação
+print("✅ Acurácia:", accuracy_score(y_test, y_pred))
+print("\n📋 Relatório de Classificação:\n", classification_report(y_test, y_pred, target_names=label_encoder.classes_))
+
+# Matriz de confusão
+conf_matrix = confusion_matrix(y_test, y_pred)
+sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=label_encoder.classes_, yticklabels=label_encoder.classes_)
+plt.xlabel("Predito")
+plt.ylabel("Real")
+plt.title("Matriz de Confusão - Naive Bayes")
+plt.show()
