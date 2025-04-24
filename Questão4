@@ -1,0 +1,49 @@
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+# (Mesmo pré-processamento da Questão 3)
+heroes = pd.read_csv("C:/Users/muril/Downloads/archive/heroes_information.csv")
+powers = pd.read_csv("C:/Users/muril/Downloads/archive/super_hero_powers.csv")
+powers.rename(columns={'hero_names': 'name'}, inplace=True)
+df = pd.merge(powers, heroes[['name', 'Alignment']], on='name', how='inner')
+df = df[df['Alignment'].isin(['good', 'bad'])]
+
+# Separar features e target
+X = df.drop(columns=['name', 'Alignment']).fillna(False)
+y = df['Alignment']
+
+# Codificar target
+from sklearn.preprocessing import LabelEncoder
+le = LabelEncoder()
+y_encoded = le.fit_transform(y)
+
+# Divisão treino/teste
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.3, random_state=42)
+
+# Treinamento do modelo Random Forest
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+
+# Previsão
+y_pred_rf = rf_model.predict(X_test)
+
+# Avaliação
+print("✅ Acurácia (Random Forest):", accuracy_score(y_test, y_pred_rf))
+print("\n📋 Relatório de Classificação:\n", classification_report(y_test, y_pred_rf, target_names=le.classes_))
+
+# Matriz de confusão
+conf_matrix_rf = confusion_matrix(y_test, y_pred_rf)
+sns.heatmap(conf_matrix_rf, annot=True, fmt="d", cmap="Purples", xticklabels=le.classes_, yticklabels=le.classes_)
+plt.xlabel("Predito")
+plt.ylabel("Real")
+plt.title("Matriz de Confusão - Random Forest")
+plt.show()
+
+# Mostrar importâncias das features
+importances = pd.Series(rf_model.feature_importances_, index=X.columns)
+importances.nlargest(10).plot(kind='barh', title='Top 10 poderes mais importantes')
+plt.xlabel("Importância")
+plt.show()
