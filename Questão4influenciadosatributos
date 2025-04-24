@@ -1,0 +1,52 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+
+# Carregar os dados
+heroes = pd.read_csv("C:/Users/muril/Downloads/archive/heroes_information.csv")
+powers = pd.read_csv("C:/Users/muril/Downloads/archive/super_hero_powers.csv")
+powers = powers.rename(columns={"hero_names": "name"})
+
+# Mesclar os arquivos
+df = pd.merge(powers, heroes, on="name", how="inner")
+
+# Converter colunas para numérico
+df["Weight"] = pd.to_numeric(df["Weight"], errors="coerce")
+df["Height"] = pd.to_numeric(df["Height"], errors="coerce")
+
+# Filtrar apenas com peso disponível
+df = df[df["Weight"].notnull()]
+df["Height"].fillna(df["Height"].median(), inplace=True)
+
+# Preencher variáveis categóricas
+df["Gender"].fillna("Unknown", inplace=True)
+df["Race"].fillna("Unknown", inplace=True)
+df["Publisher"].fillna("Unknown", inplace=True)
+
+# (Opcional) Remover colunas textuais desestruturadas
+df.drop(columns=["Eye color", "Hair color", "Skin color"], inplace=True, errors="ignore")
+
+# Definir variáveis preditoras e target
+y = df["Weight"]
+X = df.drop(columns=["name", "Weight", "id", "Unnamed: 0"], errors="ignore")
+X = pd.get_dummies(X, drop_first=True)
+X = X.fillna(0)
+
+# Treinar o modelo
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Obter importância das variáveis
+importances = pd.Series(model.feature_importances_, index=X.columns)
+top_importances = importances.sort_values(ascending=False).head(15)
+
+# Gerar o gráfico
+plt.figure(figsize=(10, 6))
+top_importances.plot(kind="barh", color="darkcyan")
+plt.gca().invert_yaxis()
+plt.title("Top 15 Atributos Mais Relevantes para Previsão de Peso")
+plt.xlabel("Importância")
+plt.tight_layout()
+plt.show()
